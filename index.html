@@ -8,150 +8,84 @@
 <title>Pull — Espresso Scale Reader</title>
 <style>
   :root{
-    --bg:#0d0b14;
-    --panel:#16131f;
-    --acid:#c8ff00;
-    --hot:#ff4d2e;
-    --ink:#efeada;
-    --mute:#76707f;
-    --line:rgba(239,234,218,.1);
-    --safe-top:env(safe-area-inset-top,0px);
-    --safe-bot:env(safe-area-inset-bottom,0px);
+    --bg:#0d0b14;--panel:#16131f;--acid:#c8ff00;--hot:#ff4d2e;
+    --ink:#efeada;--mute:#76707f;--line:rgba(239,234,218,.1);
+    --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
-  body{
-    background:var(--bg);color:var(--ink);
-    font-family:ui-monospace,"SF Mono",Menlo,monospace;
-    overflow:hidden;display:flex;flex-direction:column;
-  }
+  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,"SF Mono",Menlo,monospace;overflow:hidden;display:flex;flex-direction:column}
 
-  /* ---------- camera + ROI ---------- */
-  .stage{position:relative;flex:0 0 42%;min-height:0;background:#000;overflow:hidden}
+  .stage{position:relative;flex:0 0 40%;min-height:0;background:#000;overflow:hidden}
   video,#work{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   #work{display:none}
-  #roi{
-    position:absolute;border:2px solid var(--acid);
-    box-shadow:0 0 0 9999px rgba(0,0,0,.45);
-    touch-action:none;
-  }
-  #roi .handle{
-    position:absolute;width:34px;height:34px;border:3px solid var(--acid);
-    background:rgba(200,255,0,.15);border-radius:4px;
-  }
-  #roi .handle.tl{top:-17px;left:-17px}
-  #roi .handle.br{bottom:-17px;right:-17px}
-  .hint{
-    position:absolute;top:calc(var(--safe-top) + 12px);left:0;right:0;
-    text-align:center;font-size:10px;letter-spacing:.28em;text-transform:uppercase;
-    color:var(--ink);text-shadow:0 1px 5px #000;pointer-events:none;
-  }
+  #roi{position:absolute;border:2px solid var(--acid);box-shadow:0 0 0 9999px rgba(0,0,0,.45);touch-action:none}
+  #roi .handle{position:absolute;width:36px;height:36px;border:3px solid var(--acid);background:rgba(200,255,0,.12);border-radius:4px}
+  #roi .handle.tl{top:-18px;left:-18px}
+  #roi .handle.br{bottom:-18px;right:-18px}
+  .hint{position:absolute;top:calc(var(--safe-top) + 10px);left:0;right:0;text-align:center;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);text-shadow:0 1px 5px #000;pointer-events:none}
   .hint b{color:var(--acid)}
+  .focusring{position:absolute;width:64px;height:64px;border:2px solid var(--acid);border-radius:8px;margin:-32px 0 0 -32px;opacity:0;pointer-events:none;transition:.3s}
+  .focusring.show{opacity:1;animation:fpulse .5s}
+  @keyframes fpulse{0%{transform:scale(1.4)}100%{transform:scale(1)}}
 
-  /* ---------- readout ---------- */
-  .readout{
-    flex:0 0 auto;display:flex;align-items:baseline;justify-content:center;gap:10px;
-    padding:12px 0 8px;background:var(--panel);border-bottom:1px solid var(--line);
-  }
-  .readout .val{
-    font-size:54px;font-weight:700;letter-spacing:-.02em;
-    font-variant-numeric:tabular-nums;line-height:1;color:var(--ink);
-  }
+  .zoom{position:absolute;right:10px;top:50%;transform:translateY(-50%);height:46%;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .zoom input{writing-mode:vertical-lr;direction:rtl;width:30px;height:100%;accent-color:var(--acid)}
+  .zoom span{font-size:9px;color:var(--ink);text-shadow:0 1px 3px #000}
+
+  .readout{flex:0 0 auto;display:flex;align-items:baseline;justify-content:center;gap:10px;padding:10px 0 7px;background:var(--panel);border-bottom:1px solid var(--line);position:relative}
+  .readout .val{font-size:50px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
   .readout .val.live{color:var(--acid)}
-  .readout .unit{font-size:16px;color:var(--mute);letter-spacing:.1em}
-  .readout .conf{
-    position:absolute;right:16px;margin-top:6px;font-size:10px;color:var(--mute);
-    letter-spacing:.16em;text-transform:uppercase;
-  }
+  .readout .unit{font-size:15px;color:var(--mute)}
+  .readout .conf{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--mute);letter-spacing:.14em;text-transform:uppercase;text-align:right}
 
-  /* ---------- graph ---------- */
   .graph{flex:1 1 auto;min-height:0;position:relative;background:var(--bg)}
   #chart{position:absolute;inset:0;width:100%;height:100%}
-  .glabel{
-    position:absolute;left:12px;top:10px;font-size:10px;letter-spacing:.22em;
-    text-transform:uppercase;color:var(--mute);
-  }
+  .glabel{position:absolute;left:12px;top:9px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
   .glabel b{color:var(--hot)}
-  .stats{
-    position:absolute;right:12px;top:10px;text-align:right;font-size:10px;
-    letter-spacing:.14em;text-transform:uppercase;color:var(--mute);line-height:1.7;
-  }
+  .stats{position:absolute;right:12px;top:9px;text-align:right;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);line-height:1.7}
   .stats span{color:var(--ink)}
 
-  /* ---------- controls ---------- */
-  .controls{
-    flex:0 0 auto;display:flex;gap:10px;align-items:center;
-    padding:12px 14px calc(12px + var(--safe-bot));background:var(--panel);
-    border-top:1px solid var(--line);
-  }
-  .run{
-    flex:1;padding:17px;border:0;border-radius:14px;font-family:inherit;
-    font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-    background:var(--acid);color:#101400;
-  }
+  .controls{flex:0 0 auto;display:flex;gap:10px;align-items:center;padding:11px 14px calc(11px + var(--safe-bot));background:var(--panel);border-top:1px solid var(--line)}
+  .run{flex:1;padding:16px;border:0;border-radius:14px;font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:var(--acid);color:#101400}
   .run.stop{background:var(--hot);color:#fff}
   .run:active{opacity:.8}
-  .icon{
-    width:54px;height:54px;border-radius:14px;border:1.5px solid var(--line);
-    background:none;color:var(--ink);font-family:inherit;font-size:10px;
-    letter-spacing:.1em;text-transform:uppercase;
-  }
+  .icon{width:54px;height:54px;border-radius:14px;border:1.5px solid var(--line);background:none;color:var(--ink);font-family:inherit;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
   .icon:active{background:var(--line)}
 
-  /* ---------- calibration tray ---------- */
-  .tray{
-    position:fixed;left:0;right:0;bottom:0;background:var(--panel);
-    border-radius:20px 20px 0 0;transform:translateY(100%);
-    transition:transform .38s cubic-bezier(.2,.9,.25,1);z-index:30;
-    padding:8px 22px calc(22px + var(--safe-bot));
-    box-shadow:0 -16px 50px rgba(0,0,0,.6);
-  }
+  .tray{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform .38s cubic-bezier(.2,.9,.25,1);z-index:30;padding:8px 22px calc(20px + var(--safe-bot));box-shadow:0 -16px 50px rgba(0,0,0,.6);max-height:88vh;overflow-y:auto}
   .tray.open{transform:translateY(0)}
-  .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 18px}
-  .tray h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:18px;color:var(--acid)}
-  .field{margin-bottom:22px}
-  .field label{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-bottom:9px}
+  .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 16px}
+  .tray h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;color:var(--acid)}
+  .field{margin-bottom:18px}
+  .field label{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-bottom:8px}
   .field label b{color:var(--ink)}
   input[type=range]{width:100%;accent-color:var(--acid);height:26px}
   .seg{display:flex;gap:8px}
-  .seg button{
-    flex:1;padding:11px;border:1.5px solid var(--line);background:none;color:var(--mute);
-    border-radius:10px;font-family:inherit;font-size:12px;
-  }
+  .seg button{flex:1;padding:10px;border:1.5px solid var(--line);background:none;color:var(--mute);border-radius:10px;font-family:inherit;font-size:11px}
   .seg button.on{border-color:var(--acid);color:var(--acid)}
-  .preview{
-    display:flex;gap:14px;align-items:center;margin-bottom:20px;
-    padding:12px;border:1px solid var(--line);border-radius:12px;
-  }
-  #pvCanvas{width:120px;height:54px;background:#000;border-radius:6px;image-rendering:pixelated}
-  .preview .pvtxt{font-size:11px;color:var(--mute);line-height:1.6}
-  .preview .pvtxt b{color:var(--acid);font-size:22px;display:block}
-  .tray .done{
-    width:100%;padding:15px;border:0;border-radius:12px;background:var(--ink);color:var(--bg);
-    font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-  }
+  .preview{display:flex;gap:14px;align-items:center;margin-bottom:18px;padding:12px;border:1px solid var(--line);border-radius:12px}
+  #pvCanvas{width:150px;height:60px;background:#000;border-radius:6px;image-rendering:pixelated}
+  .preview .pvtxt{font-size:11px;color:var(--mute);line-height:1.5}
+  .preview .pvtxt b{color:var(--acid);font-size:26px;display:block;font-variant-numeric:tabular-nums}
+  .tray .done{width:100%;padding:15px;border:0;border-radius:12px;background:var(--ink);color:var(--bg);font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
 
-  .toast{
-    position:fixed;left:50%;bottom:calc(96px + var(--safe-bot));transform:translate(-50%,14px);
-    background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:24px;
-    font-size:12px;opacity:0;pointer-events:none;transition:.22s;z-index:50;
-  }
+  .toast{position:fixed;left:50%;bottom:calc(92px + var(--safe-bot));transform:translate(-50%,14px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:12px;opacity:0;pointer-events:none;transition:.22s;z-index:50;max-width:80%;text-align:center}
   .toast.show{opacity:1;transform:translate(-50%,0)}
-  .err{
-    position:absolute;inset:0;display:none;flex-direction:column;gap:12px;
-    align-items:center;justify-content:center;padding:30px;text-align:center;background:#000;
-  }
+  .err{position:absolute;inset:0;display:none;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:30px;text-align:center;background:#000}
   .err.show{display:flex}
   .err p{color:var(--mute);font-size:13px;line-height:1.6;max-width:260px}
 </style>
 </head>
 <body>
-  <div class="stage">
+  <div class="stage" id="stage">
     <video id="cam" autoplay muted playsinline></video>
     <canvas id="work"></canvas>
-    <div class="hint">Drag the <b>box</b> over the digits</div>
+    <div class="hint">Tap display to <b>focus</b> · drag box over digits</div>
     <div id="roi"><div class="handle tl"></div><div class="handle br"></div></div>
-    <div class="err" id="err"><p id="errMsg">Allow camera access. iOS needs the page served over HTTPS.</p></div>
+    <div class="focusring" id="focusring"></div>
+    <div class="zoom"><span id="zlabel">1×</span><input type="range" id="zoom" min="1" max="5" step="0.1" value="1"></div>
+    <div class="err" id="err"><p id="errMsg">Allow camera access. iOS needs HTTPS.</p></div>
   </div>
 
   <div class="readout">
@@ -176,23 +110,32 @@
     <div class="grab"></div>
     <h2>Tune recognition</h2>
     <div class="preview">
-      <canvas id="pvCanvas" width="120" height="54"></canvas>
-      <div class="pvtxt">reads as<b id="pvVal">––</b>adjust until it matches the scale</div>
+      <canvas id="pvCanvas" width="150" height="60"></canvas>
+      <div class="pvtxt">reads<b id="pvVal">––</b>green = detected segments</div>
     </div>
     <div class="field">
-      <label>Brightness threshold <b id="thVal">128</b></label>
-      <input type="range" id="thresh" min="40" max="220" value="128">
+      <label>Sensitivity <b id="thVal">40</b></label>
+      <input type="range" id="thresh" min="10" max="120" value="40">
     </div>
     <div class="field">
-      <label>Digit polarity</label>
+      <label>Digit color</label>
       <div class="seg">
-        <button id="polLight" class="on">Light on dark</button>
-        <button id="polDark">Dark on light</button>
+        <button id="cBlue" class="on">Blue/white</button>
+        <button id="cGreen">Green</button>
+        <button id="cRed">Red</button>
+        <button id="cAny">Any bright</button>
       </div>
     </div>
     <div class="field">
       <label>Decimal places <b id="decVal">1</b></label>
       <input type="range" id="decimals" min="0" max="2" value="1">
+    </div>
+    <div class="field">
+      <label>Smoothing (reject blips) <b id="smVal">on</b></label>
+      <div class="seg">
+        <button id="smOn" class="on">Median of 3</button>
+        <button id="smOff">Raw</button>
+      </div>
     </div>
     <button class="done" id="doneBtn">Done</button>
   </div>
@@ -201,11 +144,10 @@
 
 <script>
 const $=id=>document.getElementById(id);
-const cam=$('cam'), work=$('work'), roiEl=$('roi'), chart=$('chart');
-let stream=null, running=false, timer=null, t0=0;
-let data=[]; // {t, w}
-let cfg={ thresh:128, polarity:'light', decimals:1 };
-let roi={x:0.18,y:0.30,w:0.64,h:0.40}; // fractions of stage
+const cam=$('cam'),work=$('work'),roiEl=$('roi'),chart=$('chart'),stage=$('stage');
+let stream=null,track=null,running=false,t0=0,data=[],recent=[];
+let cfg={thresh:40,color:'blue',decimals:1,smooth:true};
+let roi={x:0.15,y:0.32,w:0.70,h:0.36};
 
 /* ---------- camera ---------- */
 async function startCam(){
@@ -213,134 +155,177 @@ async function startCam(){
     stream=await navigator.mediaDevices.getUserMedia({
       video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
     cam.srcObject=stream;
+    track=stream.getVideoTracks()[0];
+    try{ await track.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
+    const caps=track.getCapabilities?track.getCapabilities():{};
+    if(caps.zoom){
+      $('zoom').min=caps.zoom.min;$('zoom').max=caps.zoom.max;
+      $('zoom').step=(caps.zoom.max-caps.zoom.min)/40||0.1;$('zoom').value=caps.zoom.min;
+    }
   }catch(e){
     $('err').classList.add('show');
-    if(e.name==='NotAllowedError')$('errMsg').textContent='Camera permission denied. Enable it in Safari settings and reload.';
+    if(e.name==='NotAllowedError')$('errMsg').textContent='Camera denied. Enable in Safari settings and reload.';
   }
 }
 
+$('zoom').addEventListener('input',async e=>{
+  const z=+e.target.value;$('zlabel').textContent=z.toFixed(1)+'×';
+  if(track){try{await track.applyConstraints({advanced:[{zoom:z}]});}catch(err){}}
+});
+
+stage.addEventListener('click',async e=>{
+  if(e.target.closest('#roi')||e.target.closest('.zoom'))return;
+  const r=stage.getBoundingClientRect();
+  const fr=$('focusring');
+  fr.style.left=(e.clientX-r.left)+'px';fr.style.top=(e.clientY-r.top)+'px';
+  fr.classList.remove('show');void fr.offsetWidth;fr.classList.add('show');
+  if(track){
+    try{
+      const px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
+      await track.applyConstraints({advanced:[{focusMode:'manual',pointsOfInterest:[{x:px,y:py}]}]});
+      await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+    }catch(err){}
+  }
+});
+
 /* ---------- ROI drag ---------- */
 function layoutRoi(){
-  const s=$('.stage')||cam.parentElement, r=cam.parentElement.getBoundingClientRect();
-  roiEl.style.left=roi.x*r.width+'px';
-  roiEl.style.top=roi.y*r.height+'px';
-  roiEl.style.width=roi.w*r.width+'px';
-  roiEl.style.height=roi.h*r.height+'px';
+  const r=stage.getBoundingClientRect();
+  roiEl.style.left=roi.x*r.width+'px';roiEl.style.top=roi.y*r.height+'px';
+  roiEl.style.width=roi.w*r.width+'px';roiEl.style.height=roi.h*r.height+'px';
 }
 let drag=null;
-function pt(e){const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY};}
+const pt=e=>({x:e.clientX,y:e.clientY});
 roiEl.addEventListener('pointerdown',e=>{
-  const r=cam.parentElement.getBoundingClientRect();
-  const tl=e.target.classList.contains('tl'), br=e.target.classList.contains('br');
+  e.stopPropagation();
+  const r=stage.getBoundingClientRect();
+  const tl=e.target.classList.contains('tl'),br=e.target.classList.contains('br');
   drag={mode:tl?'tl':br?'br':'move',start:pt(e),roi:{...roi},rect:r};
   roiEl.setPointerCapture(e.pointerId);
 });
 roiEl.addEventListener('pointermove',e=>{
   if(!drag)return;
-  const p=pt(e), r=drag.rect;
-  const dx=(p.x-drag.start.x)/r.width, dy=(p.y-drag.start.y)/r.height;
+  const p=pt(e),r=drag.rect;
+  const dx=(p.x-drag.start.x)/r.width,dy=(p.y-drag.start.y)/r.height;
   let n={...drag.roi};
   if(drag.mode==='move'){n.x+=dx;n.y+=dy;}
   else if(drag.mode==='tl'){n.x+=dx;n.y+=dy;n.w-=dx;n.h-=dy;}
   else{n.w+=dx;n.h+=dy;}
-  n.w=Math.max(.12,n.w);n.h=Math.max(.08,n.h);
+  n.w=Math.max(.12,n.w);n.h=Math.max(.06,n.h);
   n.x=Math.max(0,Math.min(n.x,1-n.w));n.y=Math.max(0,Math.min(n.y,1-n.h));
   roi=n;layoutRoi();
   if($('tray').classList.contains('open'))updatePreview();
 });
 roiEl.addEventListener('pointerup',()=>drag=null);
 
-/* ---------- seven-segment recognition ----------
-   For each digit cell we test 7 segments. Each segment is sampled
-   at a point; "lit" if it passes the brightness threshold. The 7-bit
-   pattern maps to a digit. */
-const SEG_MAP={
-  0b1111110:'0',0b0110000:'1',0b1101101:'2',0b1111001:'3',
-  0b0110011:'4',0b1011011:'5',0b1011111:'6',0b1110000:'7',
-  0b1111111:'8',0b1111011:'9',0b0000000:' '
-};
-// segment sample points within a digit cell (x,y as 0..1). order: a b c d e f g
-const SEG_PTS=[
-  [.5,.08],[.85,.28],[.85,.72],[.5,.92],[.15,.72],[.15,.28],[.5,.5]
-];
-
+/* ---------- capture ROI ---------- */
+const PW=200,PH=80;
 function grabROI(){
-  const vw=cam.videoWidth, vh=cam.videoHeight;
-  if(!vw)return null;
-  // map stage-fraction ROI onto the video, accounting for object-fit:cover
-  const stage=cam.parentElement.getBoundingClientRect();
-  const scale=Math.max(stage.width/vw, stage.height/vh);
-  const dispW=vw*scale, dispH=vh*scale;
-  const offX=(dispW-stage.width)/2, offY=(dispH-stage.height)/2;
-  const sx=(roi.x*stage.width+offX)/scale;
-  const sy=(roi.y*stage.height+offY)/scale;
-  const sw=(roi.w*stage.width)/scale;
-  const sh=(roi.h*stage.height)/scale;
-  const W=240,H=100;
-  work.width=W;work.height=H;
+  const vw=cam.videoWidth,vh=cam.videoHeight;if(!vw)return null;
+  const st=stage.getBoundingClientRect();
+  const scale=Math.max(st.width/vw,st.height/vh);
+  const dispW=vw*scale,dispH=vh*scale;
+  const offX=(dispW-st.width)/2,offY=(dispH-st.height)/2;
+  const sx=(roi.x*st.width+offX)/scale,sy=(roi.y*st.height+offY)/scale;
+  const sw=(roi.w*st.width)/scale,sh=(roi.h*st.height)/scale;
+  work.width=PW;work.height=PH;
   const ctx=work.getContext('2d',{willReadFrequently:true});
-  ctx.drawImage(cam,sx,sy,sw,sh,0,0,W,H);
-  return ctx.getImageData(0,0,W,H);
+  ctx.drawImage(cam,sx,sy,sw,sh,0,0,PW,PH);
+  return ctx.getImageData(0,0,PW,PH);
 }
 
-function lit(img,px,py){
+/* ---------- mask of lit pixels ---------- */
+function buildMask(img){
+  const W=img.width,H=img.height,d=img.data;
+  const mask=new Uint8Array(W*H);
+  const T=cfg.thresh;
+  for(let i=0,p=0;i<d.length;i+=4,p++){
+    const r=d[i],g=d[i+1],b=d[i+2];
+    const lum=0.299*r+0.587*g+0.114*b;
+    let hit=false;
+    if(cfg.color==='blue')      hit=(b>90 && b-r>T*0.3 && lum>70);
+    else if(cfg.color==='green')hit=(g>90 && g-r>T*0.3 && g-b>T*0.2);
+    else if(cfg.color==='red')  hit=(r>90 && r-g>T*0.4 && r-b>T*0.3);
+    else                        hit=(lum>120+T);
+    mask[p]=hit?1:0;
+  }
+  return mask;
+}
+
+/* ---------- recognize digits ---------- */
+const PATTERNS={
+  '1111110':'0','0110000':'1','1101101':'2','1111001':'3','0110011':'4',
+  '1011011':'5','1011111':'6','1110000':'7','1111111':'8','1111011':'9'
+};
+function colInk(mask,x,W,H){let c=0;for(let y=0;y<H;y++)if(mask[y*W+x])c++;return c;}
+
+function recognize(img){
   const W=img.width,H=img.height;
-  const x=Math.floor(px*W), y=Math.floor(py*H);
-  let sum=0,c=0;
-  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
-    const xx=Math.min(W-1,Math.max(0,x+dx)), yy=Math.min(H-1,Math.max(0,y+dy));
-    const i=(yy*W+xx)*4;
-    sum+=0.299*img.data[i]+0.587*img.data[i+1]+0.114*img.data[i+2];c++;
+  const mask=buildMask(img);
+  const prof=[];for(let x=0;x<W;x++)prof.push(colInk(mask,x,W,H));
+  const thr=Math.max(1,H*0.06);
+  let groups=[],cur=null;
+  for(let x=0;x<W;x++){
+    if(prof[x]>thr){if(!cur)cur={x0:x,x1:x};else cur.x1=x;}
+    else{if(cur&&(x-cur.x1)>W*0.03){groups.push(cur);cur=null;}}
   }
-  const b=sum/c;
-  return cfg.polarity==='light' ? b>cfg.thresh : b<cfg.thresh;
+  if(cur)groups.push(cur);
+  groups=groups.filter(g=>g.x1-g.x0>=W*0.02);
+  if(!groups.length)return {ok:false,mask,str:''};
+
+  let str='';
+  for(const g of groups){
+    const gw=g.x1-g.x0+1;
+    let y0=H,y1=0;
+    for(let y=0;y<H;y++)for(let x=g.x0;x<=g.x1;x++)if(mask[y*W+x]){if(y<y0)y0=y;if(y>y1)y1=y;}
+    if(y1<y0){str+='?';continue;}
+    const gh=y1-y0+1;
+    if(gw<W*0.045){str+='1';continue;}
+    const seg=(zx0,zx1,zy0,zy1)=>{
+      let on=0,tot=0;
+      const X0=g.x0+zx0*gw,X1=g.x0+zx1*gw,Y0=y0+zy0*gh,Y1=y0+zy1*gh;
+      for(let y=Math.floor(Y0);y<=Y1;y++)for(let x=Math.floor(X0);x<=X1;x++){
+        if(x<0||x>=W||y<0||y>=H)continue;tot++;if(mask[y*W+x])on++;
+      }
+      return tot?on/tot:0;
+    };
+    const F=0.18;
+    const a=seg(.2,.8,.0,.18)>F?1:0;
+    const f=seg(.0,.32,.05,.5)>F?1:0;
+    const b=seg(.68,1,.05,.5)>F?1:0;
+    const gm=seg(.2,.8,.42,.58)>F?1:0;
+    const e=seg(.0,.32,.5,.95)>F?1:0;
+    const c=seg(.68,1,.5,.95)>F?1:0;
+    const dd=seg(.2,.8,.82,1)>F?1:0;
+    str+=(PATTERNS[`${a}${b}${c}${dd}${e}${f}${gm}`]||'?');
+  }
+  return {ok:!str.includes('?')&&str.length>0,str,mask};
 }
 
-function readDigits(img){
-  // assume up to 5 digit cells across the ROI; auto-detect used cells by activity
-  const cells=5, out=[];
-  for(let c=0;c<cells;c++){
-    const x0=c/cells, cw=1/cells;
-    let pat=0, anyLit=false;
-    for(let s=0;s<7;s++){
-      const sx=x0+SEG_PTS[s][0]*cw, sy=SEG_PTS[s][1];
-      if(lit(img,sx,sy)){pat|=(1<<(6-s));anyLit=true;}
-    }
-    out.push(anyLit?(SEG_MAP[pat]??'?'):' ');
-  }
-  return out.join('').trim();
-}
-
-function parseReading(raw){
-  let s=raw.replace(/\s+/g,'');
-  if(!s||s.includes('?'))return {ok:false,raw};
-  // insert decimal point per config
-  const d=cfg.decimals;
-  if(d>0 && s.length>d){
-    s=s.slice(0,-d)+'.'+s.slice(-d);
-  }
+function parseReading(str){
+  if(!str||str.includes('?'))return {ok:false};
+  let s=str;const d=cfg.decimals;
+  if(d>0&&s.length>d)s=s.slice(0,-d)+'.'+s.slice(-d);
   const v=parseFloat(s);
-  return isNaN(v)?{ok:false,raw}:{ok:true,v,raw};
+  return isNaN(v)?{ok:false}:{ok:true,v};
 }
 
-/* ---------- sampling loop ---------- */
+function smooth(v){
+  recent.push(v);if(recent.length>3)recent.shift();
+  if(!cfg.smooth||recent.length<3)return v;
+  return [...recent].sort((a,b)=>a-b)[1];
+}
+
 function sampleOnce(){
   const img=grabROI();if(!img)return;
-  const raw=readDigits(img);
-  const r=parseReading(raw);
+  const rec=recognize(img);
+  const r=rec.ok?parseReading(rec.str):{ok:false};
   if(r.ok){
-    $('val').textContent=r.v.toFixed(cfg.decimals);
-    $('val').classList.add('live');
-    $('conf').textContent='';
-    if(running){
-      const t=(Date.now()-t0)/1000;
-      data.push({t,w:r.v});
-      drawChart();updateStats();
-    }
-  }else{
-    $('conf').textContent='no read';
-    $('val').classList.remove('live');
-  }
+    const v=smooth(r.v);
+    $('val').textContent=v.toFixed(cfg.decimals);
+    $('val').classList.add('live');$('conf').textContent='';
+    if(running){const t=(Date.now()-t0)/1000;data.push({t,w:v});drawChart();updateStats();}
+  }else{$('conf').textContent='no read';$('val').classList.remove('live');}
 }
 
 /* ---------- chart ---------- */
@@ -348,101 +333,69 @@ function drawChart(){
   const dpr=window.devicePixelRatio||1;
   const r=chart.parentElement.getBoundingClientRect();
   chart.width=r.width*dpr;chart.height=r.height*dpr;
-  const ctx=chart.getContext('2d');ctx.scale(dpr,dpr);
-  const W=r.width,H=r.height,L=34,R=10,T=30,B=22;
-  ctx.clearRect(0,0,W,H);
-  if(data.length<2)return;
+  const ctx=chart.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=r.width,H=r.height,L=34,R=10,T=28,B=20;
+  ctx.clearRect(0,0,W,H);if(data.length<2)return;
   const tMax=Math.max(2,data[data.length-1].t);
   const wMax=Math.max(2,...data.map(d=>d.w))*1.1;
-  const X=t=>L+(t/tMax)*(W-L-R);
-  const Y=w=>H-B-(w/wMax)*(H-T-B);
-  // grid
-  ctx.strokeStyle='rgba(239,234,218,.08)';ctx.lineWidth=1;
-  ctx.fillStyle='#76707f';ctx.font='9px ui-monospace';
-  for(let i=0;i<=4;i++){
-    const w=wMax*i/4, y=Y(w);
-    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();
-    ctx.fillText(w.toFixed(0),4,y+3);
-  }
-  // flow-rate area = derivative? keep simple: line + fill
-  ctx.beginPath();ctx.moveTo(X(data[0].t),Y(data[0].w));
-  data.forEach(d=>ctx.lineTo(X(d.t),Y(d.w)));
+  const X=t=>L+(t/tMax)*(W-L-R),Y=w=>H-B-(w/wMax)*(H-T-B);
+  ctx.strokeStyle='rgba(239,234,218,.08)';ctx.fillStyle='#76707f';ctx.font='9px ui-monospace';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const w=wMax*i/4,y=Y(w);ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.fillText(w.toFixed(0),4,y+3);}
+  ctx.beginPath();ctx.moveTo(X(data[0].t),Y(data[0].w));data.forEach(d=>ctx.lineTo(X(d.t),Y(d.w)));
   ctx.lineTo(X(data[data.length-1].t),H-B);ctx.lineTo(X(data[0].t),H-B);ctx.closePath();
-  const g=ctx.createLinearGradient(0,T,0,H-B);
-  g.addColorStop(0,'rgba(255,77,46,.35)');g.addColorStop(1,'rgba(255,77,46,0)');
-  ctx.fillStyle=g;ctx.fill();
-  ctx.beginPath();ctx.moveTo(X(data[0].t),Y(data[0].w));
-  data.forEach(d=>ctx.lineTo(X(d.t),Y(d.w)));
-  ctx.strokeStyle='#ff4d2e';ctx.lineWidth=2;ctx.stroke();
-  // last point
-  const last=data[data.length-1];
-  ctx.fillStyle='#c8ff00';ctx.beginPath();ctx.arc(X(last.t),Y(last.w),3.5,0,7);ctx.fill();
+  const g=ctx.createLinearGradient(0,T,0,H-B);g.addColorStop(0,'rgba(255,77,46,.35)');g.addColorStop(1,'rgba(255,77,46,0)');ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(X(data[0].t),Y(data[0].w));data.forEach(d=>ctx.lineTo(X(d.t),Y(d.w)));ctx.strokeStyle='#ff4d2e';ctx.lineWidth=2;ctx.stroke();
+  const last=data[data.length-1];ctx.fillStyle='#c8ff00';ctx.beginPath();ctx.arc(X(last.t),Y(last.w),3.5,0,7);ctx.fill();
 }
-
 function updateStats(){
   if(!data.length){$('stats').innerHTML='';return;}
-  const last=data[data.length-1];
-  let flow=0;
-  if(data.length>3){
-    const a=data[data.length-4], b=last;
-    flow=(b.w-a.w)/Math.max(.1,(b.t-a.t));
-  }
-  $('stats').innerHTML=
-    `time <span>${last.t.toFixed(1)}s</span><br>`+
-    `final <span>${last.w.toFixed(cfg.decimals)}g</span><br>`+
-    `flow <span>${flow.toFixed(1)}g/s</span>`;
+  const last=data[data.length-1];let flow=0;
+  if(data.length>3){const a=data[data.length-4];flow=(last.w-a.w)/Math.max(.1,last.t-a.t);}
+  $('stats').innerHTML=`time <span>${last.t.toFixed(1)}s</span><br>final <span>${last.w.toFixed(cfg.decimals)}g</span><br>flow <span>${flow.toFixed(1)}g/s</span>`;
 }
 
-/* ---------- preview in tray ---------- */
+/* ---------- preview ---------- */
 function updatePreview(){
   const img=grabROI();if(!img)return;
+  const rec=recognize(img);
   const pv=$('pvCanvas'),ctx=pv.getContext('2d');
-  // render thresholded view so user sees what the recognizer sees
   const tmp=document.createElement('canvas');tmp.width=img.width;tmp.height=img.height;
-  const tc=tmp.getContext('2d');const id=tc.createImageData(img.width,img.height);
-  for(let i=0;i<img.data.length;i+=4){
-    const b=0.299*img.data[i]+0.587*img.data[i+1]+0.114*img.data[i+2];
-    const on=cfg.polarity==='light'?b>cfg.thresh:b<cfg.thresh;
-    const v=on?255:0;id.data[i]=id.data[i+1]=0;id.data[i+2]=0;
-    if(on){id.data[i]=200;id.data[i+1]=255;id.data[i+2]=0;}
-    id.data[i+3]=255;
+  const tc=tmp.getContext('2d'),id=tc.createImageData(img.width,img.height);
+  for(let p=0;p<rec.mask.length;p++){
+    const i=p*4,on=rec.mask[p];
+    id.data[i]=on?200:15;id.data[i+1]=on?255:15;id.data[i+2]=on?0:22;id.data[i+3]=255;
   }
   tc.putImageData(id,0,0);
-  ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,pv.width,pv.height);
-  ctx.drawImage(tmp,0,0,pv.width,pv.height);
-  const r=parseReading(readDigits(img));
-  $('pvVal').textContent=r.ok?r.v.toFixed(cfg.decimals):'––';
+  ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,pv.width,pv.height);ctx.drawImage(tmp,0,0,pv.width,pv.height);
+  const r=rec.ok?parseReading(rec.str):{ok:false};
+  $('pvVal').textContent=r.ok?r.v.toFixed(cfg.decimals):(rec.str||'––');
 }
 
 /* ---------- controls ---------- */
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),1600);}
-
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),1800);}
 $('runBtn').addEventListener('click',()=>{
   running=!running;
-  if(running){
-    if(!data.length)t0=Date.now();
-    else t0=Date.now()-data[data.length-1].t*1000;
-    $('runBtn').textContent='Stop';$('runBtn').classList.add('stop');
-    toast('Recording — sampling every second');
-  }else{
-    $('runBtn').textContent='Start';$('runBtn').classList.remove('stop');
-  }
+  if(running){t0=data.length?Date.now()-data[data.length-1].t*1000:Date.now();$('runBtn').textContent='Stop';$('runBtn').classList.add('stop');toast('Recording every second');}
+  else{$('runBtn').textContent='Start';$('runBtn').classList.remove('stop');}
 });
-$('clrBtn').addEventListener('click',()=>{data=[];drawChart();updateStats();$('stats').innerHTML='';toast('Cleared');});
+$('clrBtn').addEventListener('click',()=>{data=[];recent=[];drawChart();updateStats();$('stats').innerHTML='';toast('Cleared');});
 $('calBtn').addEventListener('click',()=>{$('tray').classList.add('open');updatePreview();});
 $('doneBtn').addEventListener('click',()=>$('tray').classList.remove('open'));
-
 $('thresh').addEventListener('input',e=>{cfg.thresh=+e.target.value;$('thVal').textContent=cfg.thresh;updatePreview();});
 $('decimals').addEventListener('input',e=>{cfg.decimals=+e.target.value;$('decVal').textContent=cfg.decimals;updatePreview();});
-$('polLight').addEventListener('click',()=>{cfg.polarity='light';$('polLight').classList.add('on');$('polDark').classList.remove('on');updatePreview();});
-$('polDark').addEventListener('click',()=>{cfg.polarity='dark';$('polDark').classList.add('on');$('polLight').classList.remove('on');updatePreview();});
+function setColor(c,btn){cfg.color=c;['cBlue','cGreen','cRed','cAny'].forEach(id=>$(id).classList.remove('on'));btn.classList.add('on');updatePreview();}
+$('cBlue').onclick=e=>setColor('blue',e.target);
+$('cGreen').onclick=e=>setColor('green',e.target);
+$('cRed').onclick=e=>setColor('red',e.target);
+$('cAny').onclick=e=>setColor('any',e.target);
+$('smOn').onclick=()=>{cfg.smooth=true;$('smOn').classList.add('on');$('smOff').classList.remove('on');$('smVal').textContent='on';};
+$('smOff').onclick=()=>{cfg.smooth=false;$('smOff').classList.add('on');$('smOn').classList.remove('on');$('smVal').textContent='off';};
 
-/* continuous live read (always), record only when running */
-setInterval(sampleOnce, 1000);
-
+setInterval(sampleOnce,1000);
+setInterval(()=>{if($('tray').classList.contains('open'))updatePreview();},300);
 cam.addEventListener('loadedmetadata',()=>{layoutRoi();drawChart();});
 window.addEventListener('resize',()=>{layoutRoi();drawChart();});
-startCam();
+layoutRoi();startCam();
 </script>
 </body>
 </html>
