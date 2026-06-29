@@ -127,8 +127,12 @@
       </div>
     </div>
     <div class="field">
-      <label>Decimal places <b id="decVal">1</b></label>
-      <input type="range" id="decimals" min="0" max="2" value="1">
+      <label>Number of digits <b id="ndVal">4</b></label>
+      <input type="range" id="ndigits" min="2" max="6" value="4">
+    </div>
+    <div class="field">
+      <label>Decimal places <b id="decVal">2</b></label>
+      <input type="range" id="decimals" min="0" max="3" value="2">
     </div>
     <div class="field">
       <label>Smoothing (reject blips) <b id="smVal">on</b></label>
@@ -146,7 +150,7 @@
 const $=id=>document.getElementById(id);
 const cam=$('cam'),work=$('work'),roiEl=$('roi'),chart=$('chart'),stage=$('stage');
 let stream=null,track=null,running=false,t0=0,data=[],recent=[];
-let cfg={thresh:40,color:'blue',decimals:1,smooth:true};
+let cfg={thresh:40,color:'blue',decimals:2,digits:4,smooth:true};
 let roi={x:0.15,y:0.32,w:0.70,h:0.36};
 
 /* ---------- camera ---------- */
@@ -257,55 +261,91 @@ const PATTERNS={
   '1111110':'0','0110000':'1','1101101':'2','1111001':'3','0110011':'4',
   '1011011':'5','1011111':'6','1110000':'7','1111111':'8','1111011':'9'
 };
-function colInk(mask,x,W,H){let c=0;for(let y=0;y<H;y++)if(mask[y*W+x])c++;return c;}
+
+// classify one digit window [gx0,gx1]x[y0,y1] from the mask
+function classifyDigit(mask,W,H,gx0,gx1,y0,y1){
+  const gw=gx1-gx0+1, gh=y1-y0+1;
+  if(gw<=0||gh<=0)return '?';
+  const seg=(zx0,zx1,zy0,zy1)=>{
+    let on=0,tot=0;
+    const X0=gx0+zx0*gw,X1=gx0+zx1*gw,Y0=y0+zy0*gh,Y1=y0+zy1*gh;
+    for(let y=Math.floor(Y0);y<=Y1;y++)for(let x=Math.floor(X0);x<=X1;x++){
+      if(x<0||x>=W||y<0||y>=H)continue;tot++;if(mask[y*W+x])on++;
+    }
+    return tot?on/tot:0;
+  };
+  if(seg(0,1,0,1)<0.04) return '';
+  const F=0.16;
+  const a=seg(.18,.82,.0,.20)>F?1:0;
+  const f=seg(.0,.34,.05,.52)>F?1:0;
+  const b=seg(.66,1,.05,.52)>F?1:0;
+  const gm=seg(.18,.82,.40,.60)>F?1:0;
+  const e=seg(.0,.34,.48,.95)>F?1:0;
+  const c=seg(.66,1,.48,.95)>F?1:0;
+  const dd=seg(.18,.82,.80,1)>F?1:0;
+  return PATTERNS[`${a}${b}${c}${dd}${e}${f}${gm}`]||'?';
+}
 
 function recognize(img){
   const W=img.width,H=img.height;
   const mask=buildMask(img);
-  const prof=[];for(let x=0;x<W;x++)prof.push(colInk(mask,x,W,H));
-  const thr=Math.max(1,H*0.06);
-  let groups=[],cur=null;
-  for(let x=0;x<W;x++){
-    if(prof[x]>thr){if(!cur)cur={x0:x,x1:x};else cur.x1=x;}
-    else{if(cur&&(x-cur.x1)>W*0.03){groups.push(cur);cur=null;}}
-  }
-  if(cur)groups.push(cur);
-  groups=groups.filter(g=>g.x1-g.x0>=W*0.02);
-  if(!groups.length)return {ok:false,mask,str:''};
+  const ND=cfg.digits||4;
 
-  let str='';
-  for(const g of groups){
-    const gw=g.x1-g.x0+1;
-    let y0=H,y1=0;
-    for(let y=0;y<H;y++)for(let x=g.x0;x<=g.x1;x++)if(mask[y*W+x]){if(y<y0)y0=y;if(y>y1)y1=y;}
-    if(y1<y0){str+='?';continue;}
-    const gh=y1-y0+1;
-    if(gw<W*0.045){str+='1';continue;}
-    const seg=(zx0,zx1,zy0,zy1)=>{
-      let on=0,tot=0;
-      const X0=g.x0+zx0*gw,X1=g.x0+zx1*gw,Y0=y0+zy0*gh,Y1=y0+zy1*gh;
-      for(let y=Math.floor(Y0);y<=Y1;y++)for(let x=Math.floor(X0);x<=X1;x++){
-        if(x<0||x>=W||y<0||y>=H)continue;tot++;if(mask[y*W+x])on++;
-      }
-      return tot?on/tot:0;
-    };
-    const F=0.18;
-    const a=seg(.2,.8,.0,.18)>F?1:0;
-    const f=seg(.0,.32,.05,.5)>F?1:0;
-    const b=seg(.68,1,.05,.5)>F?1:0;
-    const gm=seg(.2,.8,.42,.58)>F?1:0;
-    const e=seg(.0,.32,.5,.95)>F?1:0;
-    const c=seg(.68,1,.5,.95)>F?1:0;
-    const dd=seg(.2,.8,.82,1)>F?1:0;
-    str+=(PATTERNS[`${a}${b}${c}${dd}${e}${f}${gm}`]||'?');
+  const colP=new Array(W).fill(0), rowP=new Array(H).fill(0);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(mask[y*W+x]){colP[x]++;rowP[y]++;}
+
+  let y0=0,y1=H-1;
+  const rThr=Math.max(1,W*0.02);
+  while(y0<H&&rowP[y0]<rThr)y0++;
+  while(y1>y0&&rowP[y1]<rThr)y1--;
+  if(y1<=y0)return {ok:false,mask,str:''};
+
+  const cThr=Math.max(1,H*0.05);
+  let blobs=[],cur=null;
+  for(let x=0;x<W;x++){
+    if(colP[x]>cThr){if(!cur)cur={x0:x,x1:x};else cur.x1=x;}
+    else{if(cur&&(x-cur.x1)>W*0.06){blobs.push(cur);cur=null;}}
   }
-  return {ok:!str.includes('?')&&str.length>0,str,mask};
+  if(cur)blobs.push(cur);
+  if(!blobs.length)return {ok:false,mask,str:''};
+
+  let merged=[{...blobs[0]}];
+  for(let i=1;i<blobs.length;i++){
+    const prev=merged[merged.length-1];
+    if(blobs[i].x0-prev.x1 < W*0.12) prev.x1=blobs[i].x1;
+    else merged.push({...blobs[i]});
+  }
+  merged.sort((p,q)=>(q.x1-q.x0)-(p.x1-p.x0));
+  const span=merged[0];
+  let gx0=span.x0, gx1=span.x1;
+
+  const totalW=gx1-gx0+1;
+  const slotW=totalW/ND;
+  let str='';
+  for(let i=0;i<ND;i++){
+    const sx0=Math.round(gx0+i*slotW);
+    const sx1=Math.round(gx0+(i+1)*slotW)-1;
+    let sy0=H,sy1=0;
+    for(let y=y0;y<=y1;y++)for(let x=sx0;x<=sx1;x++)if(mask[y*W+x]){if(y<sy0)sy0=y;if(y>sy1)sy1=y;}
+    if(sy1<sy0){str+='';continue;}
+    let minx=sx1,maxx=sx0,ink=0;
+    for(let y=sy0;y<=sy1;y++)for(let x=sx0;x<=sx1;x++)if(mask[y*W+x]){ink++;if(x<minx)minx=x;if(x>maxx)maxx=x;}
+    const digW=maxx-minx+1;
+    if(ink>0 && digW < slotW*0.42){str+='1';continue;}
+    str+=classifyDigit(mask,W,H,sx0,sx1,sy0,sy1);
+  }
+  return {ok:str.length>0 && !str.includes('?'),str,mask};
 }
 
 function parseReading(str){
   if(!str||str.includes('?'))return {ok:false};
-  let s=str;const d=cfg.decimals;
-  if(d>0&&s.length>d)s=s.slice(0,-d)+'.'+s.slice(-d);
+  let s=str.replace(/^0+(?=\d)/,''); // trim leading zeros but keep one
+  if(!s)s='0';
+  const d=cfg.decimals;
+  if(d>0){
+    while(s.length<=d)s='0'+s;          // pad so dot has room
+    s=s.slice(0,-d)+'.'+s.slice(-d);
+  }
   const v=parseFloat(s);
   return isNaN(v)?{ok:false}:{ok:true,v};
 }
@@ -383,6 +423,7 @@ $('calBtn').addEventListener('click',()=>{$('tray').classList.add('open');update
 $('doneBtn').addEventListener('click',()=>$('tray').classList.remove('open'));
 $('thresh').addEventListener('input',e=>{cfg.thresh=+e.target.value;$('thVal').textContent=cfg.thresh;updatePreview();});
 $('decimals').addEventListener('input',e=>{cfg.decimals=+e.target.value;$('decVal').textContent=cfg.decimals;updatePreview();});
+$('ndigits').addEventListener('input',e=>{cfg.digits=+e.target.value;$('ndVal').textContent=cfg.digits;updatePreview();});
 function setColor(c,btn){cfg.color=c;['cBlue','cGreen','cRed','cAny'].forEach(id=>$(id).classList.remove('on'));btn.classList.add('on');updatePreview();}
 $('cBlue').onclick=e=>setColor('blue',e.target);
 $('cGreen').onclick=e=>setColor('green',e.target);
