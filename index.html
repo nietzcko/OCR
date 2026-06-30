@@ -355,30 +355,54 @@ function recognize(img){
   let blobs=components(mask,W,H);
   if(!blobs.length)return {ok:false,mask,str:''};
 
-  // reference digit height = tallest blob (a real digit)
-  const maxH=Math.max(...blobs.map(b=>b.h));
-  if(maxH < H*0.25)return {ok:false,mask,str:''}; // nothing big enough
+  // fill ratio = area / bbox-area. Seven-seg digits are hollow strokes (~0.25-0.6).
+  // Solid glare/reflection blobs fill their box (>0.68). Reject those — EXCEPT
+  // narrow blobs, since a "1" is a near-solid thin bar and must be kept.
+  for(const b of blobs){ b.fill = b.area/(b.w*b.h); b.narrow = (b.w/b.h) < 0.40; }
+  let cand = blobs.filter(b =>
+    b.h >= H*0.30 &&                       // tall enough to be a digit
+    (b.narrow || b.fill < 0.68) &&         // not a solid glare blob (1's exempt)
+    b.w/b.h < 1.5 &&                       // not a wide smear
+    b.area > 8
+  );
+  if(!cand.length)return {ok:false,mask,str:''};
 
-  // classify blobs: digits vs decimal dots vs junk
-  const digits=[], dots=[];
+  // reference digit height = MEDIAN of candidates (robust to one outlier)
+  const heights=cand.map(b=>b.h).sort((a,b)=>a-b);
+  const refH=heights[(heights.length/2)|0];
+
+  // keep only blobs whose height is consistent with the reference digit
+  const dots=[]; let digits=[];
   for(const b of blobs){
-    const tall = b.h >= maxH*0.55;
-    const aspect = b.w/b.h;
-    const small = b.h < maxH*0.35;
-    // decimal point: small, low in the display, roughly square
-    if(small && b.area>2 && b.area < maxH*maxH*0.10 && b.y1 > maxH*0.55){
-      dots.push(b);continue;
+    const consistent = b.h >= refH*0.70 && b.h <= refH*1.30;
+    const isDigitShape = consistent && (b.narrow || b.fill<0.68) && b.w/b.h<1.5;
+    if(isDigitShape){ digits.push(b); continue; }
+    // decimal point: small, low, compact
+    if(b.h < refH*0.40 && b.area>=2 && b.y1 > refH*0.55 && b.w/b.h<2){
+      dots.push(b);
     }
-    // digit: tall enough, not absurdly wide (icons), reasonable area
-    if(tall && aspect < 1.4 && b.area > maxH*2){
-      digits.push(b);
-    }
-    // everything else (g label, power icon, wifi icon, speckle) ignored
+    // everything else ignored (glare, icons, g-label, speckle)
   }
   if(!digits.length)return {ok:false,mask,str:''};
 
   digits.sort((p,q)=>p.x0-q.x0);
   dots.sort((p,q)=>p.x0-q.x0);
+
+  // Reject an isolated narrow blob (likely a glare bar, not a "1") sitting far
+  // from its neighbours. Real digits are evenly spaced; a stray bar is an outlier.
+  if(digits.length>2){
+    const gaps=[];
+    for(let i=1;i<digits.length;i++)gaps.push(digits[i].x0-digits[i-1].x1);
+    const medGap=[...gaps].sort((a,b)=>a-b)[(gaps.length/2)|0];
+    digits=digits.filter((b,i)=>{
+      if(!b.narrow)return true;            // only scrutinize thin blobs
+      const leftGap = i>0 ? b.x0-digits[i-1].x1 : Infinity;
+      const rightGap= i<digits.length-1 ? digits[i+1].x0-b.x1 : Infinity;
+      const nearest=Math.min(leftGap,rightGap);
+      return nearest <= medGap*2.5;        // too far from any neighbour => drop
+    });
+  }
+  if(!digits.length)return {ok:false,mask,str:''};
 
   // build string, inserting '.' where a dot sits between/after digits
   let str='';
